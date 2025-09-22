@@ -1,0 +1,48 @@
+name: OWASP ZAP Scan
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Permet de lancer manuellement le scan
+
+jobs:
+  zap_scan:
+    runs-on: ubuntu-latest
+
+    services:
+      mongo:
+        image: mongo:4.4
+        ports:
+          - 27017:27017
+        env:
+          MONGO_INITDB_DATABASE: TIWAP
+          MONGO_INITDB_ROOT_USERNAME: username
+          MONGO_INITDB_ROOT_PASSWORD: password
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Compose
+        run: docker-compose up -d --build
+
+      - name: Wait for the app to be ready
+        run: |
+          echo "Waiting for TIWAP to be ready..."
+          sleep 15
+          curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:5000 || exit 1
+
+      - name: Run ZAP Baseline Scan
+        run: |
+          docker run --network host \
+            -v ${{ github.workspace }}/zap:/zap/wrk \
+            ghcr.io/zaproxy/zaproxy:latest \
+            zap.sh -cmd -quickurl http://localhost:5000 \
+                   -quickout /zap/wrk/zap-report.html
+
+      - name: Upload ZAP HTML Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-report
+          path: zap/zap-report.html
