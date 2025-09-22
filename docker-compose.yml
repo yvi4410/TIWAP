@@ -1,35 +1,40 @@
 version: "3.8"
 
 services:
+  # Application TIWAP
   app:
     build: .
     ports:
-      - "5001:5000"  # OK : expose seulement Flask sur 5001
+      - "5001:5000"  # ⚠️ Port externe 5001 accessible localement, redirigé vers le port 5000 interne (Flask)
     volumes:
       - .:/app
     depends_on:
       - db
     environment:
+      - FLASK_APP=main.py  # ⚠️ Assure-toi que c'est bien ton fichier principal Flask
       - MONGO_URI=mongodb://username:password@db:27017/TIWAP
     command: flask run --host=0.0.0.0 --port=5000
     networks:
       - tiwap_network
 
+  # Base de données MongoDB
   db:
-    image: "mongo:4.4"
+    image: mongo:4.4
     environment:
       - MONGO_INITDB_DATABASE=TIWAP
       - MONGO_INITDB_ROOT_USERNAME=username
       - MONGO_INITDB_ROOT_PASSWORD=password
     volumes:
       - ./init-db.js:/docker-entrypoint-initdb.d/init-db.js:ro
-    # 🔥 ports supprimés ici
+    ports:
+      - "27017:27017"  # Port de MongoDB (⚠️ évite les conflits locaux)
     networks:
       - tiwap_network
 
+  # Outil de scan ZAP (Zed Attack Proxy)
   zap:
     image: ghcr.io/zaproxy/zaproxy:latest
-    entrypoint: ["sleep", "infinity"]
+    entrypoint: ["sleep", "infinity"]  # Permet de garder le conteneur ZAP actif pour exécuter les commandes
     depends_on:
       - app
     networks:
