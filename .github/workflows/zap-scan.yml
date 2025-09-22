@@ -4,41 +4,50 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:  # permet de lancer le workflow manuellement
+  workflow_dispatch:
 
 jobs:
   zap_scan:
     runs-on: ubuntu-latest
+    services:
+      docker:
+        image: docker:24.0.6
+        options: --privileged
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Start TIWAP app with Docker Compose
-        run: docker compose up -d --build
+      - name: Set up Docker Compose
+        uses: docker/setup-buildx-action@v3
 
-      - name: Show Flask logs (debug)
-        run: docker compose logs app
+      - name: Build and start containers
+        run: |
+          docker compose up -d --build
 
-      - name: Wait for the TIWAP app to be ready
+      - name: Wait for TIWAP to be ready...
         run: |
           echo "Waiting for TIWAP to be ready..."
-          curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:5000 || exit 1
+          for i in {1..10}; do
+            if curl --fail http://localhost:5001; then
+              echo "TIWAP is up!"
+              break
+            fi
+            echo "Retrying in 5s... ($i/10)"
+            sleep 5
+          done
+        shell: bash
 
-      - name: Run OWASP ZAP scan
+      - name: Run ZAP scan from container
         run: |
-          docker run --network host \
-            -v ${{ github.workspace }}/zap:/zap/wrk \
-            ghcr.io/zaproxy/zaproxy:latest \
-            zap.sh -cmd -quickurl http://localhost:5001 \
-                   -quickout /zap/wrk/zap-report.html
+          docker exec tiwap-zap-1 zap.sh -cmd -quickurl http://app:5000 -quickout /zap/zap-report.html
 
-      - name: Upload ZAP report as artifact
+      - name: Copy ZAP HTML report to host
+        run: |
+          docker cp tiwap-zap-1:/zap/zap-report.html ./zap-report.html
+
+      - name: Upload ZAP report artifact
         uses: actions/upload-artifact@v4
         with:
-          name: zap-report
-          path: zap/zap-report.html
-
-      - name: Stop Docker Compose
-        if: always()
-        run: docker compose down
+          name: zap-security-report
+          path: ./zap-report.html
