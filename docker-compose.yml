@@ -5,7 +5,7 @@ services:
   app:
     build: .
     ports:
-      - "5001:5000"  # ⚠️ Port externe 5001 accessible localement, redirigé vers le port 5000 interne (Flask)
+      - "5001:5000"
     volumes:
       - .:/app
     depends_on:
@@ -27,14 +27,13 @@ services:
     volumes:
       - ./init-db.js:/docker-entrypoint-initdb.d/init-db.js:ro
     ports:
-      - "27017:27017"  # Port de MongoDB (⚠️ évite les conflits locaux)
+      - "27017:27017"
     networks:
       - tiwap_network
 
-  # Outil de scan ZAP (Zed Attack Proxy)
   zap:
     image: ghcr.io/zaproxy/zaproxy:latest
-    entrypoint: ["sleep", "infinity"]  # Permet de garder le conteneur ZAP actif pour exécuter les commandes
+    entrypoint: ["sleep", "infinity"]
     depends_on:
       - app
     networks:
