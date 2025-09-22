@@ -4,7 +4,7 @@ services:
   app:
     build: .
     ports:
-      - "5001:5000"
+      - "5001:5000"  # OK : expose seulement Flask sur 5001
     volumes:
       - .:/app
     depends_on:
@@ -23,8 +23,7 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=password
     volumes:
       - ./init-db.js:/docker-entrypoint-initdb.d/init-db.js:ro
-    ports:
-      - "27017:27017"
+    # 🔥 ports supprimés ici
     networks:
       - tiwap_network
 
