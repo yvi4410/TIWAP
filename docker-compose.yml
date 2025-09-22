@@ -1,13 +1,20 @@
-version: "2"
+version: "3.8"
+
 services:
   app:
     build: .
     ports:
-      - "5000:5000"
+      - "5001:5000"
     volumes:
       - .:/app
     depends_on:
       - db
+    environment:
+      - MONGO_URI=mongodb://username:password@db:27017/TIWAP
+    command: flask run --host=0.0.0.0 --port=5000
+    networks:
+      - tiwap_network
+
   db:
     image: "mongo:4.4"
     environment:
@@ -18,3 +25,17 @@ services:
       - ./init-db.js:/docker-entrypoint-initdb.d/init-db.js:ro
     ports:
       - "27017:27017"
+    networks:
+      - tiwap_network
+
+  zap:
+    image: ghcr.io/zaproxy/zaproxy:latest
+    entrypoint: ["sleep", "infinity"]
+    depends_on:
+      - app
+    networks:
+      - tiwap_network
+
+networks:
+  tiwap_network:
+    driver: bridge
