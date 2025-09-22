@@ -5,7 +5,7 @@ services:
   app:
     build: .
     ports:
-      - "5001:5000"  # ⚠️ Port externe 5001 accessible localement, redirigé vers le port 5000 interne (Flask)
+      - "5000:5000"  # ⚠️ Port externe 5001 accessible localement, redirigé vers le port 5000 interne (Flask)
     volumes:
       - .:/app
     depends_on:
